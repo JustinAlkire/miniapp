@@ -1,0 +1,1 @@
+This is my readme file I created with my first merge, and now I have added text to merge changes utilizing gitbash.
