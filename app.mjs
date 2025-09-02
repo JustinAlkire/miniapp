@@ -9,6 +9,7 @@ const app = express()
 const PORT = process.env.PORT || 3000;
 
 app.use(express.static(join(__dirname, 'public')));
+app.use(express.json());
 
 app.get('/', (req, res) => {
   res.send('Hello World from Render <a href="/barry">barry</a>')
@@ -25,6 +26,24 @@ app.get('/api/barry', (req, res) => {
   // res.send('barry. <a href="/">home</a>')
   const myVar = 'Hello from server!';
   res.json({ myVar });
+})
+
+app.get('/api/query', (req, res) => {
+console.log("client request with query param:", req.query.name);
+const name = req.query.name;
+res.json({"message": `Hi, ${name}. How are you?` });
+})
+
+app.get('/api/url/:id', (req, res) => {
+console.log("client request with url param:", req.params.id);
+//const name = req.query.name;
+//res.json({"message": `Hi, ${name}. How are you?` });
+})
+
+app.post('/api/body', (req, res) => {
+console.log("client request with POST body:", req.body);
+const name = req.body.name
+
 })
 
 //app.listen(3000)
