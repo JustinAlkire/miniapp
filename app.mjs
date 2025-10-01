@@ -5,15 +5,19 @@ import { dirname, join } from 'path';
 import { MongoClient, ServerApiVersion, ObjectId } from 'mongodb';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
+import cookieParser from 'cookie-parser';
 
 const app = express()
 const PORT = process.env.PORT || 3000; 
+const JWT_SECRET = process.env.JWT_SECRET
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 app.use(express.static(join(__dirname, 'public')));
 
 app.use(express.json()); 
+
+app.use(cookieParser());
 
 // const { MongoClient, ServerApiVersion } = require('mongodb');
 const uri = process.env.MONGO_URI; 
@@ -40,28 +44,87 @@ async function connectDB() {
 connectDB();
 
 
+// Authentication middleware 4 login
+function authenticateToken(req, res, next) {
+  const token = req.cookies.token;
+
+  if (!token) {
+    return res.redirect('/login.html');
+  }
+
+  jwt.verify(token, JWT_SECRET, (err, user) => {
+    if (err) {
+      return res.redirect('/login.html');
+    }
+    req.user = user;
+    next();
+  });
+}
+
+// Login endpoint
+app.post('/api/auth/login', async (req, res) => {
+  try {
+    const { username, password } = req.body;
+
+    if (!username || !password) {
+      return res.status(400).json({ error: 'Username and password are required' });
+    }
+
+    // Only allow root/root login
+    if (username === 'root' && password === 'root') {
+      const token = jwt.sign(
+        { userId: 'root', username: 'root', isRoot: true },
+        JWT_SECRET,
+        { expiresIn: '24h' }
+      );
+
+      res.cookie('token', token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        maxAge: 24 * 60 * 60 * 1000
+      });
+
+      return res.json({ 
+        message: 'Login successful',
+        username: 'root',
+        redirectTo: '/records.html'
+      });
+    }
+
+    return res.status(401).json({ error: 'Invalid credentials' });
+  } catch (error) {
+    res.status(500).json({ error: 'Login failed: ' + error.message });
+  }
+});
+
+// Logout endpoint
+app.post('/api/auth/logout', (req, res) => {
+  res.clearCookie('token');
+  res.json({ message: 'Logged out successfully' });
+});
 
 
-app.get('/', (req, res) => {
-  res.send('Hello Express from Render 😍😍😍. <a href="barry">barry</a><br><a href="student-crud.html">📝 crud time!</a><br><a href="advanced-student-manager.html">🚀 Advanced CRUD!</a>')
+
+app.get('/', authenticateToken, (req, res) => {
+  res.send('Hello Express from Render 😍😍😍. <a href="barry">barry</a><br><a href="login.html">Login</a><br>')
 })
 
 // endpoints...middlewares...apis? 
 
 // send an html file
-app.get('/barry', (req, res) => {
+app.get('/barry', authenticateToken, (req, res) => {
  
   res.sendFile(join(__dirname, 'public', 'barry.html')) 
 
 })
 
-app.get('/api/barry', (req, res) => {
+app.get('/api/barry', authenticateToken, (req, res) => {
   // res.send('barry. <a href="/">home</a>')
   const myVar = 'Hello from server!';
   res.json({ myVar });
 })
 
-app.get('/api/query', (req, res) => {
+app.get('/api/query', authenticateToken, (req, res) => {
 
   //console.log("client request with query param:", req.query.name); 
   const name = req.query.name; 
@@ -72,7 +135,7 @@ app.get('/api/query', (req, res) => {
   // res.json({ message: `Hello, ${name} (from query param)` });
 });
 
-app.get('/api/url/:iaddasfsd', (req, res) => {
+app.get('/api/url/:iaddasfsd', authenticateToken, (req, res) => {
 
   console.log("client request with URL param:", req.params.iaddasfsd); 
   // const name = req.query.name; 
@@ -81,7 +144,7 @@ app.get('/api/url/:iaddasfsd', (req, res) => {
 });
 
 
-app.get('/api/body', (req, res) => {
+app.get('/api/body', authenticateToken, (req, res) => {
 
   console.log("client request with POST body:", req.query); 
   // const name = req.body.name; 
@@ -89,143 +152,7 @@ app.get('/api/body', (req, res) => {
 
 });
 
-// CRUD ENDPOINTS FOR TEACHING
-// Collection: students (documents with name, age, grade fields)
 
-// CREATE - Add a new student
-app.post('/api/students', async (req, res) => {
-  try {
-    const { name, age, grade } = req.body;
-    
-    // Simple validation
-    if (!name || !age || !grade) {
-      return res.status(400).json({ error: 'Name, age, and grade are required' });
-    }
-
-    const student = { name, age: parseInt(age), grade };
-    const result = await db.collection('students').insertOne(student);
-    
-    res.status(201).json({ 
-      message: 'Student created successfully',
-      studentId: result.insertedId,
-      student: { ...student, _id: result.insertedId }
-    });
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to create student: ' + error.message });
-  }
-});
-
-// READ - Get all students
-app.get('/api/students', async (req, res) => {
-  try {
-    const students = await db.collection('students').find({}).toArray();
-    res.json(students); // Return just the array for frontend simplicity
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch students: ' + error.message });
-  }
-});
-
-// UPDATE - Update a student by ID
-app.put('/api/students/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { name, age, grade } = req.body;
-
-    // Validate ObjectId
-    if (!ObjectId.isValid(id)) {
-      return res.status(400).json({ error: 'Invalid student ID' });
-    }
-
-    const updateData = {};
-    if (name) updateData.name = name;
-    if (age) updateData.age = parseInt(age);
-    if (grade) updateData.grade = grade;
-
-    const result = await db.collection('students').updateOne(
-      { _id: new ObjectId(id) },
-      { $set: updateData }
-    );
-
-    if (result.matchedCount === 0) {
-      return res.status(404).json({ error: 'Student not found' });
-    }
-
-    res.json({ 
-      message: 'Student updated successfully',
-      modifiedCount: result.modifiedCount 
-    });
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to update student: ' + error.message });
-  }
-});
-
-// DELETE - Delete a student by ID
-app.delete('/api/students/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    // Validate ObjectId
-    if (!ObjectId.isValid(id)) {
-      return res.status(400).json({ error: 'Invalid student ID' });
-    }
-
-    const result = await db.collection('students').deleteOne({ _id: new ObjectId(id) });
-
-    if (result.deletedCount === 0) {
-      return res.status(404).json({ error: 'Student not found' });
-    }
-
-    res.json({ 
-      message: 'Student deleted successfully',
-      deletedCount: result.deletedCount 
-    });
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to delete student: ' + error.message });
-  }
-});
-
-// SEED - Add sample data for teaching
-app.post('/api/seed', async (req, res) => {
-  try {
-    // First, clear existing data
-    await db.collection('students').deleteMany({});
-    
-    // Sample students for teaching
-    const sampleStudents = [
-      { name: "Alice Johnson", age: 20, grade: "A" },
-      { name: "Bob Smith", age: 19, grade: "B+" },
-      { name: "Charlie Brown", age: 21, grade: "A-" },
-      { name: "Diana Prince", age: 18, grade: "A+" },
-      { name: "Edward Norton", age: 22, grade: "B" },
-      { name: "Fiona Apple", age: 19, grade: "A" },
-      { name: "George Wilson", age: 20, grade: "C+" },
-      { name: "Hannah Montana", age: 18, grade: "B-" }
-    ];
-
-    const result = await db.collection('students').insertMany(sampleStudents);
-    
-    res.json({ 
-      message: `Database seeded successfully! Added ${result.insertedCount} sample students.`,
-      insertedCount: result.insertedCount 
-    });
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to seed database: ' + error.message });
-  }
-});
-
-// CLEANUP - Remove all student data
-app.delete('/api/cleanup', async (req, res) => {
-  try {
-    const result = await db.collection('students').deleteMany({});
-    
-    res.json({ 
-      message: `Database cleaned successfully! Removed ${result.deletedCount} students.`,
-      deletedCount: result.deletedCount 
-    });
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to cleanup database: ' + error.message });
-  }
-});
 
 
 app.listen(PORT, () => {
