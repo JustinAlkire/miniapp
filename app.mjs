@@ -105,8 +105,8 @@ app.post('/api/auth/logout', (req, res) => {
 
 
 
-app.get('/', authenticateToken, (req, res) => {
-  res.send('Hello Express from Render 😍😍😍. <a href="barry">barry</a><br><a href="login.html">Login</a><br>')
+app.get('/', (req, res) => {
+  res.redirect('/login.html');
 })
 
 // endpoints...middlewares...apis? 
@@ -152,6 +152,85 @@ app.get('/api/body', authenticateToken, (req, res) => {
 
 });
 
+// Record page 
+app.post('/api/records', authenticateToken, async (req, res) => {
+  try {
+    const { title, artist, genre } = req.body;
+
+    if (!title || !artist || !genre) {
+      return res.status(400).json({ error: 'Title, artist, and genre are required' });
+    }
+
+    const record = {
+      title,
+      artist,
+      genre,
+      createdAt: new Date()
+    };
+
+    const result = await db.collection('records').insertOne(record);
+    
+    res.status(201).json({ 
+      message: 'Record added successfully', 
+      recordId: result.insertedId 
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to add record: ' + error.message });
+  }
+});
+
+// READ - Get all records
+app.get('/api/records', authenticateToken, async (req, res) => {
+  try {
+    const records = await db.collection('records').find({}).toArray();
+    res.json(records);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch records: ' + error.message });
+  }
+});
+
+// UPDATE - Update a record
+app.put('/api/records/:id', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updates = req.body;
+
+    // Remove any fields that shouldn't be updated
+    delete updates._id;
+
+    const result = await db.collection('records').updateOne(
+      { _id: new ObjectId(id) },
+      { $set: updates }
+    );
+
+    if (result.matchedCount === 0) {
+      return res.status(404).json({ error: 'Record not found' });
+    }
+
+    res.json({ message: 'Record updated successfully' });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to update record: ' + error.message });
+  }
+});
+
+// DELETE - Delete a record
+app.delete('/api/records/:id', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const result = await db.collection('records').deleteOne({ 
+      _id: new ObjectId(id) 
+    });
+
+    if (result.deletedCount === 0) {
+      return res.status(404).json({ error: 'Record not found' });
+    }
+
+    res.json({ message: 'Record deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to delete record: ' + error.message });
+  }
+});
 
 
 
