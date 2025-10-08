@@ -58,6 +58,9 @@
     </div>
 
     <script>
+        console.log('🔐 Development Login Credentials:');
+        console.log('Username: root');
+        console.log('Password: root');
         document.getElementById('loginForm').onsubmit = async (e) => {
             e.preventDefault();
             const res = await fetch('/api/auth/login', {

@@ -111,46 +111,6 @@ app.get('/', (req, res) => {
 
 // endpoints...middlewares...apis? 
 
-// send an html file
-app.get('/barry', authenticateToken, (req, res) => {
- 
-  res.sendFile(join(__dirname, 'public', 'barry.html')) 
-
-})
-
-app.get('/api/barry', authenticateToken, (req, res) => {
-  // res.send('barry. <a href="/">home</a>')
-  const myVar = 'Hello from server!';
-  res.json({ myVar });
-})
-
-app.get('/api/query', authenticateToken, (req, res) => {
-
-  //console.log("client request with query param:", req.query.name); 
-  const name = req.query.name; 
-  res.json({"message": `Hi, ${name}. How are you?`});
-
-  // receivedData.queries.push(req.query.name || 'Guest');
-  // const name = req.query.name || 'Guest';
-  // res.json({ message: `Hello, ${name} (from query param)` });
-});
-
-app.get('/api/url/:iaddasfsd', authenticateToken, (req, res) => {
-
-  console.log("client request with URL param:", req.params.iaddasfsd); 
-  // const name = req.query.name; 
-  // res.json({"message": `Hi, ${name}. How are you?`});
-
-});
-
-
-app.get('/api/body', authenticateToken, (req, res) => {
-
-  console.log("client request with POST body:", req.query); 
-  // const name = req.body.name; 
-  // res.json({"message": `Hi, ${name}. How are you?`});
-
-});
 
 // Record page 
 app.post('/api/records', authenticateToken, async (req, res) => {

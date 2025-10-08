@@ -38,7 +38,7 @@
         }
         .click-hint {
             font-size: 0.8em;
-            color: #6c757d;
+            color: #ccd4db;
             font-style: italic;
         }
         .save-indicator {
@@ -64,13 +64,28 @@
         .border-purple {
             border-color: #6f42c1 !important;
         }
+        h1 {
+            text-shadow: 
+            0 0 10px rgba(255, 255, 255, 0.8),
+            0 0 20px rgba(0, 150, 255, 0.8),
+            0 0 30px rgba(0, 150, 255, 0.6),
+            0 0 40px rgba(0, 150, 255, 0.4);
+        }
+        footer p {
+            text-align: center;
+            text-shadow: 
+            0 0 10px rgba(255, 255, 255, 0.8),
+            0 0 20px rgba(0, 150, 255, 0.8),
+            0 0 30px rgba(0, 150, 255, 0.6),
+            0 0 40px rgba(0, 150, 255, 0.4);
+        }
     </style>
 </head>
 <body>
     <div class="container mt-5">
         <div class="row mb-4">
             <div class="col-12">
-                <h1 class="text-center mb-3">🎵 Record Collection Database</h1>
+                <h1 class="text-center mb-3">🎵 Vinyl Record Collection Database</h1>
                 <p class="text-center text-muted">Edit any field below by clicking on it, and editing!</p>
             </div>
         </div>
@@ -401,5 +416,8 @@
         // Load records when page loads
         window.addEventListener('load', loadRecords);
     </script>
+    <footer>
+        <p>CRUD app made by Justin Alkire utilizing Node.js, Express, & MongoDB</p>
+    </footer>
 </body>
 </html>
